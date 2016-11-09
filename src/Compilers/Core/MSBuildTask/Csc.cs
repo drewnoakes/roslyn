@@ -3,6 +3,8 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
 using System.Text;
 using Roslyn.Utilities;
 using Microsoft.Build.Framework;
@@ -184,16 +186,13 @@ namespace Microsoft.CodeAnalysis.BuildTasks
         /// </summary>
         protected override string GenerateFullPathToTool()
         {
-            string pathToTool = ToolLocationHelper.GetPathToBuildToolsFile(ToolName, ToolLocationHelper.CurrentToolsVersion);
+            var assembly = typeof(Csc).GetTypeInfo().Assembly;
+            var currentDirectory = Path.GetDirectoryName(assembly.ManifestModule.FullyQualifiedName);
+            var pathToTool = Path.Combine(currentDirectory, ToolName);
 
-            if (null == pathToTool)
+            if (null == pathToTool || !File.Exists(pathToTool))
             {
-                pathToTool = ToolLocationHelper.GetPathToDotNetFrameworkFile(ToolName, TargetDotNetFrameworkVersion.VersionLatest);
-
-                if (null == pathToTool)
-                {
-                    Log.LogErrorWithCodeFromResources("General_FrameworksFileNotFound", ToolName, ToolLocationHelper.GetDotNetFrameworkVersionFolderPrefix(TargetDotNetFrameworkVersion.VersionLatest));
-                }
+                Log.LogErrorWithCodeFromResources("General_ToolFileNotFound", pathToTool);
             }
 
             return pathToTool;

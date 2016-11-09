@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using Roslyn.Utilities;
@@ -204,16 +206,13 @@ namespace Microsoft.CodeAnalysis.BuildTasks
         /// </summary>
         protected override string GenerateFullPathToTool()
         {
-            string pathToTool = ToolLocationHelper.GetPathToBuildToolsFile(ToolName, ToolLocationHelper.CurrentToolsVersion);
+            var assembly = typeof(Csc).GetTypeInfo().Assembly;
+            var currentDirectory = Path.GetDirectoryName(assembly.ManifestModule.FullyQualifiedName);
+            var pathToTool = Path.Combine(currentDirectory, ToolName);
 
-            if (pathToTool == null)
+            if (null == pathToTool || !File.Exists(pathToTool))
             {
-                pathToTool = ToolLocationHelper.GetPathToDotNetFrameworkFile(ToolName, TargetDotNetFrameworkVersion.VersionLatest);
-
-                if (pathToTool == null)
-                {
-                    Log.LogErrorWithCodeFromResources("General_FrameworksFileNotFound", ToolName, ToolLocationHelper.GetDotNetFrameworkVersionFolderPrefix(TargetDotNetFrameworkVersion.VersionLatest));
-                }
+                Log.LogErrorWithCodeFromResources("General_ToolFileNotFound", pathToTool);
             }
 
             return pathToTool;
